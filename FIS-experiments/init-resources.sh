@@ -19,7 +19,7 @@ awslocal lambda create-function \
   --function-name add-product \
   --runtime java17 \
   --handler lambda.AddProduct::handleRequest \
-  --memory-size 512 \
+  --memory-size 1024 \
   --zip-file fileb:///etc/localstack/init/ready.d/target/product-lambda.jar \
   --region us-east-1 \
   --role arn:aws:iam::000000000000:role/productRole \
@@ -37,16 +37,6 @@ awslocal lambda create-function \
   --role arn:aws:iam::000000000000:role/productRole \
   --environment Variables={AWS_REGION=us-east-1}
 
-echo "Healthcheck Lambda..."
-awslocal lambda create-function \
-  --function-name healthcheck \
-  --runtime python3.11 \
-  --handler healthcheck.lambda_handler \
-  --memory-size 512 \
-  --zip-file fileb:///etc/localstack/init/ready.d/healthcheck.zip \
-  --region us-east-1 \
-  --role arn:aws:iam::000000000000:role/productRole \
-
 export REST_API_ID=12345
 
 # create rest api gateway
@@ -60,12 +50,6 @@ export PARENT_ID=$(awslocal apigateway get-resources --rest-api-id $REST_API_ID 
 # get resource id
 echo "Export Resource ID..."
 export RESOURCE_ID=$(awslocal apigateway create-resource --rest-api-id $REST_API_ID --parent-id $PARENT_ID --path-part "productApi" --region=us-east-1 | jq -r '.id')
-
-echo "Export HealthCheck Resource ID..."
-export HEALTHCHECK_RESOURCE_ID=$(awslocal apigateway create-resource --rest-api-id $REST_API_ID --parent-id $PARENT_ID --path-part "healthcheck" --region=us-east-1 | jq -r '.id')
-
-echo "HEALTH CHECK ID 1:"
-echo $HEALTHCHECK_RESOURCE
 
 echo "RESOURCE ID:"
 echo $RESOURCE
@@ -120,31 +104,39 @@ awslocal apigateway put-integration \
   --passthrough-behavior WHEN_NO_MATCH \
   --region=us-east-1
 
-echo "Put GET Method that returns 200 for HealthCheck..."
-awslocal apigateway put-method \
---rest-api-id $REST_API_ID \
---resource-id $HEALTHCHECK_RESOURCE_ID \
---http-method GET \
---request-parameters "method.request.path.healthcheck=true" \
---authorization-type "NONE" \
---region=us-east-1
-
-
-echo "Put GET Method Integration for HealthCheck..."
-awslocal apigateway put-integration \
-  --rest-api-id $REST_API_ID \
-  --resource-id $HEALTHCHECK_RESOURCE_ID \
-  --http-method GET \
-  --type HTTP \
-  --integration-http-method GET \
-  --type AWS_PROXY \
-  --uri arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:000000000000:function:healthcheck/invocations \
-  --passthrough-behavior WHEN_NO_MATCH \
-  --region=us-east-1
-
-
 echo "Create DEV Deployment..."
 awslocal apigateway create-deployment \
   --rest-api-id $REST_API_ID \
   --stage-name dev \
   --region=us-east-1
+
+awslocal sns create-topic --name ProductEventsTopic
+
+awslocal sqs create-queue --queue-name ProductEventsQueue
+
+awslocal sqs get-queue-attributes --queue-url http://localhost:4566/000000000000/ProductEventsQueue --attribute-names QueueArn
+
+awslocal sns subscribe \
+    --topic-arn arn:aws:sns:us-east-1:000000000000:ProductEventsTopic \
+    --protocol sqs \
+    --notification-endpoint arn:aws:sqs:us-east-1:000000000000:ProductEventsQueue
+
+awslocal lambda create-function \
+  --function-name process-product-events \
+  --runtime java17 \
+  --handler lambda.DynamoDBWriterLambda::handleRequest \
+  --memory-size 512 \
+  --zip-file fileb:///etc/localstack/init/ready.d/target/product-lambda.jar \
+  --region us-east-1 \
+  --role arn:aws:iam::000000000000:role/productRole
+
+awslocal lambda create-event-source-mapping \
+    --function-name process-product-events \
+    --batch-size 10 \
+    --event-source-arn arn:aws:sqs:us-east-1:000000000000:ProductEventsQueue
+
+awslocal sqs set-queue-attributes \
+    --queue-url http://localhost:4566/000000000000/ProductEventsQueue \
+    --attributes VisibilityTimeout=10
+
+
