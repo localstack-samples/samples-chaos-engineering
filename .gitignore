@@ -11,9 +11,6 @@ FIS-experiments/volume/
 route53-failover/volume/
 extension-outages/volume/
 
-FIS-experiments/lambda-functions/target/
-route53-failover/lambda-functions/target/
-extension-outages/lambda-functions/target/
 
 FIS-experiments/lambda-functions/.idea/
 route53-failover/lambda-functions/.idea/

@@ -19,12 +19,12 @@ awslocal dynamodb update-table \
 
 awslocal lambda create-function \
     --function-name dynamodb-streams-to-lambda \
-    --handler dynamodb-streams-to-lambda.lambda_handler \
-    --runtime python3.11 \
+    --runtime java17 \
+    --handler dynamodb_streams.DynamoDBStreamHandler::handleRequest \
     --memory-size 256 \
-    --zip-file fileb:///etc/localstack/init/ready.d/dynamodb-streams-to-lambda.zip \
-    --role arn:aws:iam::000000000000:role/productRole
-
+    --zip-file fileb:///etc/localstack/init/ready.d/target/product-lambda.jar \
+    --role arn:aws:iam::000000000000:role/productRole \
+    --region us-east-1
 
 export STREAM_ARN=$(awslocal dynamodb describe-table --table-name Products --region us-east-1 | jq -r '.Table.LatestStreamArn')
 
@@ -165,7 +165,7 @@ awslocal apigateway create-deployment \
   --stage-name dev \
   --region=us-east-1
 
---------------------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------------------
 
 # Create resources for 2nd region
 
