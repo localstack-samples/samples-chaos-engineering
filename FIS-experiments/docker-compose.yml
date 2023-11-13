@@ -25,7 +25,6 @@ services:
       - "./volume:/var/lib/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "./lambda-functions/target/product-lambda.jar:/etc/localstack/init/ready.d/target/product-lambda.jar"
-      - "./lambda-functions/healthcheck.zip:/etc/localstack/init/ready.d/healthcheck.zip"
       - "./init-resources.sh:/etc/localstack/init/ready.d/init-resources.sh"
 
 networks:

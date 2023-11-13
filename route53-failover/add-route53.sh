@@ -82,13 +82,3 @@ LOCALSTACK_DNS_SERVER=localhost
 # This should return `12345.execute-api.localhost.localstack.cloud` as the healthcheck is currently passing
 dig @$LOCALSTACK_DNS_SERVER +noall +answer test.hello-localstack.com CNAME
 
-# # Make the healthcheck fail by pointing it to a nonexistent host
-# awslocal route53 update-health-check --health-check-id ${HEALTH_CHECK_ID} --fully-qualified-domain-name bad-host-p45e8eG94rK.com
-#
-# # Wait for the healthcheck to refresh
-# sleep 12
-#
-# # This should return the failover `67890.execute-api.localhost.localstack.cloud`
-# dig @$LOCALSTACK_DNS_SERVER +noall +answer test.hello-localstack.com CNAME
-
-# curl --resolve test.hello-localstack.com:4566:127.0.0.1 http://67890.execute-api.localhost.localstack.cloud:4566/dev/quoteApi
