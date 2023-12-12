@@ -31,7 +31,7 @@ awslocal lambda create-function \
   --function-name get-product \
   --runtime java17 \
   --handler lambda.GetProduct::handleRequest \
-  --memory-size 512 \
+  --memory-size 1024 \
   --zip-file fileb:///etc/localstack/init/ready.d/target/product-lambda.jar \
   --region us-east-1 \
   --role arn:aws:iam::000000000000:role/productRole \
@@ -125,7 +125,7 @@ awslocal lambda create-function \
   --function-name process-product-events \
   --runtime java17 \
   --handler lambda.DynamoDBWriterLambda::handleRequest \
-  --memory-size 512 \
+  --memory-size 1024 \
   --zip-file fileb:///etc/localstack/init/ready.d/target/product-lambda.jar \
   --region us-east-1 \
   --role arn:aws:iam::000000000000:role/productRole
