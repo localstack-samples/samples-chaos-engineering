@@ -34,7 +34,7 @@ cd lambda-functions && mvn clean package shade:shade
 ### Starting LocalStack
 
 ```bash
-export LOCALSTACK_API_KEY = <your_localstack_api_key>
+export LOCALSTACK_AUTH_TOKEN = <your_localstack_auth_token>
 docker compose up
 ```
 

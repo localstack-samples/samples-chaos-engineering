@@ -15,7 +15,7 @@ services:
       - LOCALSTACK_HOST=localstack # where services are available from other containers
       - LAMBDA_DOCKER_NETWORK=ls_network
       - DISABLE_CUSTOM_CORS_APIGATEWAY=1
-      - LOCALSTACK_API_KEY=${LOCALSTACK_API_KEY}
+      - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN}
       - EXTENSION_AUTO_INSTALL=localstack-extension-outages
       - LAMBDA_RUNTIME_ENVIRONMENT_TIMEOUT=60
       - PERSIST_ALL=false
