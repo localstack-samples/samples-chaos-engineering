@@ -1,7 +1,7 @@
 # Chaos Engineering with LocalStack
 
 This repository provides examples of different chaos engineering solutions using LocalStack.
-It is meant to support the documentation user guide for chaos engineering: [http://localstack.cloud/user-guide/chaos-engineering/](https://docs.localstack.cloud/user-guide/chaos-engineering/)
+It is meant to support the documentation user guide for chaos engineering: [http://docs.localstack.cloud/user-guide/chaos-engineering/](https://docs.localstack.cloud/user-guide/chaos-engineering/)
 
 Chaos engineering with LocalStack presents a proactive approach to building resilient systems by introducing 
 controlled disruptions. This versatile practice varies in its application; for software developers, it might 
