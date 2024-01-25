@@ -15,7 +15,7 @@ demonstrate testing software behavior and error handling. This kind of test help
 database downtime gracefully by implementing strategies such as queuing requests to prevent data loss. This proactive error
 handling ensures that the system can maintain its operations despite partial failures.
 
-![fis-experiment-1](fis-experiment-1.png)
+![fis-experiment-1](images/fis-experiment-1.png)
 
 ## Prerequisites
 
@@ -163,7 +163,7 @@ that prevents data loss in case of an outage of the database. This of course is 
 simulated for any storage resource.
 
 
-![fis-experiment-2](fis-experiment-2.png)
+![fis-experiment-2](images/fis-experiment-2.png)
 
 The solution includes an SNS topic, an SQS queue and a Lambda function that will pick up the queued element and retry the 
 `PutItem` on the database. In case DynamoDB is still unavailable, the item will be re-queued.
