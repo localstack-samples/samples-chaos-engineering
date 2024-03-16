@@ -24,3 +24,5 @@ route53-failover/lambda-functions/lambda-functions.iml
 /extension-outages/terraform/.terraform
 /extension-outages/terraform/.terraform.lock.hcl
 /extension-outages/terraform/terraform.tfstate
+
+target/
