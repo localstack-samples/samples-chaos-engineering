@@ -14,6 +14,9 @@ is generally a good approach to test infrastructure provisioning resilience. Thi
 ability to cope with and recover from infrastructure anomalies, which is a crucial aspect of chaos engineering aimed at
 verifying the reliability of infrastructure as code (IaC) and automated provisioning processes.
 
+> [!WARNING]
+> Outages Extension is deprecated and no longer supported. Please migrate to the Chaos Plugin.
+
 ## Getting started
 
 In this example we will be using a popular IaC tool, Terraform, to define our desired infrastructure in a declarative manner.
