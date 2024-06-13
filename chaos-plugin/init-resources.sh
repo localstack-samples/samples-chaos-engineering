@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -xeu
 
 LAMBDAS_DIR=/etc/localstack/init/ready.d
 if [[ ! -e $LAMBDAS_DIR ]]; then
