@@ -8,7 +8,7 @@
 
 ## Description
 
-In this example of utilizing AWS Fault Injection Simulator (FIS) to cause controlled outages to a DynamoDB database we will demonstrate testing software behavior and error handling.
+In this sample, we use LocalStack Chaos Plugin to cause controlled outages in the DynamoDB service to study the resiliency of the architecture and improve fault tolerance.
 This kind of test helps to ensure that the software can handle database downtime gracefully by implementing strategies such as queuing requests to prevent data loss.
 This proactive error handling ensures that the system can maintain its operations despite partial failures.
 
