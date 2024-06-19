@@ -17,7 +17,7 @@ handling ensures that the system can maintain its operations despite partial fai
 
 > [!WARNING]
 > This sample uses the FIS action `localstack:generic:api-error` which is deprecated and marked for removal.
-> Please migrate to the Chaos Plugin which supports this capability and more.
+> Please migrate to the Chaos API which supports this capability and more.
 
 ![fis-experiment-1](images/fis-experiment-1.png)
 

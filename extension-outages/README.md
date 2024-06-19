@@ -15,7 +15,7 @@ ability to cope with and recover from infrastructure anomalies, which is a cruci
 verifying the reliability of infrastructure as code (IaC) and automated provisioning processes.
 
 > [!WARNING]
-> Outages Extension is deprecated and no longer supported. Please migrate to the Chaos Plugin.
+> Outages Extension is deprecated and no longer supported. Please migrate to the Chaos API.
 
 ## Getting started
 
