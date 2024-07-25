@@ -1,45 +1,42 @@
 
-# Route53 Failover with FIS
+# Route53 Failover
 
 
 | Environment      | <img src="https://img.shields.io/badge/LocalStack-deploys-4D29B4.svg?logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAKgAAACoABZrFArwAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAALbSURBVHic7ZpNaxNRFIafczNTGIq0G2M7pXWRlRv3Lusf8AMFEQT3guDWhX9BcC/uFAr1B4igLgSF4EYDtsuQ3M5GYrTaj3Tmui2SpMnM3PlK3m1uzjnPw8xw50MoaNrttl+r1e4CNRv1jTG/+v3+c8dG8TSilHoAPLZVX0RYWlraUbYaJI2IuLZ7KKUWCisgq8wF5D1A3rF+EQyCYPHo6Ghh3BrP8wb1en3f9izDYlVAp9O5EkXRB8dxxl7QBoNBpLW+7fv+a5vzDIvVU0BELhpjJrmaK2NMw+YsIxunUaTZbLrdbveZ1vpmGvWyTOJToNlsuqurq1vAdWPMeSDzwzhJEh0Bp+FTmifzxBZQBXiIKaAq8BBDQJXgYUoBVYOHKQRUER4mFFBVeJhAQJXh4QwBVYeHMQJmAR5GCJgVeBgiYJbg4T8BswYPp+4GW63WwvLy8hZwLcd5TudvBj3+OFBIeA4PD596nvc1iiIrD21qtdr+ysrKR8cY42itCwUP0Gg0+sC27T5qb2/vMunB/0ipTmZxfN//orW+BCwmrGV6vd63BP9P2j9WxGbxbrd7B3g14fLfwFsROUlzBmNM33XdR6Meuxfp5eg54IYxJvXCx8fHL4F3w36blTdDI4/0WREwMnMBeQ+Qd+YC8h4g78wF5D1A3rEqwBiT6q4ubpRSI+ewuhP0PO/NwcHBExHJZZ8PICI/e73ep7z6zzNPwWP1djhuOp3OfRG5kLROFEXv19fXP49bU6TbYQDa7XZDRF6kUUtEtoFb49YUbh/gOM7YbwqnyG4URQ/PWlQ4ASllNwzDzY2NDX3WwioKmBgeqidgKnioloCp4aE6AmLBQzUExIaH8gtIBA/lFrCTFB7KK2AnDMOrSeGhnAJSg4fyCUgVHsolIHV4KI8AK/BQDgHW4KH4AqzCQwEfiIRheKKUAvjuuu7m2tpakPdMmcYYI1rre0EQ1LPo9w82qyNziMdZ3AAAAABJRU5ErkJggg=="> |
 |------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| __Services__     | Amazon API Gateway, Lambda, DynamoDB, SNS, SQS, FIS, Route53                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| __Services__     | Amazon API Gateway, Lambda, DynamoDB, SNS, SQS, Route53                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | __Categories__   | LocalStack Pro, Init Hooks, Java SDK                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-
-## Notice
-
-The FIS service is currently available as part of the **LocalStack Pro** plan.
 
 ## Introduction
 
-LocalStack allows you to integrate & test [Fault Injection Simulator (FIS)](https://docs.localstack.cloud/user-guide/aws/fis/) 
-with [Route53](https://docs.localstack.cloud/user-guide/aws/route53/) to automatically divert users to a healthy secondary zone if the primary region fails, ensuring system 
-availability and responsiveness. Route53's health checks and traffic redirection enhance architecture resilience and ensure 
-service continuity during regional outages, crucial for uninterrupted user experiences.
+LocalStack allows you to integrate and test Chaos Plugin with Route53 to automatically divert users to a healthy secondary zone if the primary region fails, ensuring system availability and responsiveness.
+Route53's health checks and traffic redirection enhance architecture resilience and ensure service continuity during regional outages, crucial for uninterrupted user experiences.
 
+> [!NOTE]
+> Route53 Failover and Chaos API is currently available as part of the LocalStack Enterprise plan.
+> If you'd like to try it out, please [contact us](https://www.localstack.cloud/demo) to request access.
 
 ## Getting started
 
-This guide is designed for users new to the Route53 and FIS services. In this example, there's an active-primary and 
-passive-standby configuration. Route53 routes traffic to the primary region, which processes product-related requests 
-through API Gateway and Lambda functions, with data stored in DynamoDB. If the primary region fails, Route53 redirects to 
-the standby region, maintained in sync by a replication Lambda function.
+This tutorial is designed for users new to the Route53 and LocalStack Chaos plugin services.
+In this example, there's an active-primary and passive-standby configuration.
+Route53 routes traffic to the primary region, which processes product-related requests through API Gateway and Lambda functions, with data stored in DynamoDB.
+If the primary region fails, Route53 redirects to the standby region, maintained in sync by a replication Lambda function.
 
-For this particular example, we'll be using a [sample application repository](https://github.com/localstack-samples/samples-chaos-engineering/tree/main/route53-failover). 
+For this particular example, we'll be using a [sample application repository](https://github.com/localstack-samples/samples-chaos-engineering/tree/main/route53-failover).
 Clone the repository, and follow the instructions below to get started.
 
 ### Prerequisites
 
 The general prerequisites for this guide are:
 
-- LocalStack Pro with a [LocalStack Auth Token](https://docs.localstack.cloud/getting-started/auth-token/)
-- [AWS CLI](https://docs.localstack.cloud/user-guide/integrations/aws-cli/) with the [`awslocal` wrapper](https://docs.localstack.cloud/user-guide/integrations/aws-cli/#localstack-aws-cli-awslocal)
+- LocalStack Pro with LocalStack Auth Token](#)
+- [AWS CLI](#) with the [`awslocal` wrapper](#)
 - [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/)
 - [Python-3](https://www.python.org/downloads/)
-- `dig` installed
+- `dig`
 
-Start LocalStack by using the `docker-compose.yml` file from the repository. 
+Start LocalStack by using the `docker-compose.yml` file from the repository.
 Ensure to set your Auth Token as an environment variable during this process.
 
 ```
@@ -47,24 +44,26 @@ $ LOCALSTACK_AUTH_TOKEN=<YOUR_LOCALSTACK_AUTH_TOKEN>
 $ docker compose up
 ```
 
-### Application Architecture
+### Architecture
 
 The following diagram shows the architecture that this application builds and deploys:
 
-![route53-product-stack](images/route53-product-stack.png)
+{{< figure src="route53-failover-1.png" width="800">}}
 
 ### Creating the resources
 
-To begin, deploy the same services in both `us-west-1` and `us-east-1` regions. The resources specified in 
-the `init-resources.sh` file will be created when the LocalStack container starts, using Initialization Hooks and 
-the `awslocal` CLI tool.
+To begin, deploy the same services in both `us-west-1` and `us-east-1` regions.
+The resources specified in the `init-resources.sh` file will be created when the LocalStack container starts, using [Initialization Hooks](#) and the `awslocal` CLI tool.
 
-The objective is to have a backup system in case of a regional outage in the primary availability zone (`us-west-1`). We'll focus on this region to examine the existing resilience mechanisms.
+The objective is to have a backup system in case of a regional outage in the primary availability zone (`us-west-1`).
+We'll focus on this region to examine the existing resilience mechanisms.
 
-![fis-api-gw-region](images/fis-api-gw-region.png)
+{{< figure src="route53-failover-2.png" width="800">}}
 
 -   The primary API Gateway includes a health check endpoint that returns a 200 HTTP status code, serving as a basic check for its availability.
--   Data synchronization across regions can be achieved with AWS-native tools like DynamoDB Streams and AWS Lambda. Here, any changes to the primary table trigger a Lambda function, replicating these changes to a secondary table. This configuration is essential for high availability and disaster recovery.
+-   Data synchronization across regions can be achieved with AWS-native tools like DynamoDB Streams and AWS Lambda.
+    Here, any changes to the primary table trigger a Lambda function, replicating these changes to a secondary table.
+    This configuration is essential for high availability and disaster recovery.
 
 ### Configuring a Route53 hosted zone
 
@@ -82,103 +81,101 @@ $ HEALTH_CHECK_ID=$(
 awslocal route53 create-health-check \
 --caller-reference foobar \
 --health-check-config '{
-"FullyQualifiedDomainName": "12345.execute-api.localhost.localstack.cloud",
-"Port": 4566,
-"ResourcePath": "/dev/healthcheck",
-"Type": "HTTP",
-"RequestInterval": 10
+    "FullyQualifiedDomainName": "12345.execute-api.localhost.localstack.cloud",
+    "Port": 4566,
+    "ResourcePath": "/dev/healthcheck",
+    "Type": "HTTP",
+    "RequestInterval": 10
 }' | jq -r .HealthCheck.Id
 )
 ```
 
-This command creates a Route 53 health check for an HTTP endpoint 
-(`12345.execute-api.localhost.localstack.cloud:4566/dev/healthcheck`) with a 10-second request interval and captures the 
-health check's ID. The caller reference identifier in AWS resource creation or updates prevents accidental duplication 
-if requests are repeated.
+This command creates a Route 53 health check for an HTTP endpoint (`12345.execute-api.localhost.localstack.cloud:4566/dev/healthcheck`) with a 10-second request interval and captures the health check's ID.
+The caller reference identifier in AWS resource creation or updates prevents accidental duplication if requests are repeated.
 
-To update DNS records in the specified Route53 hosted zone (`$HOSTED_ZONE_ID`), add two CNAME records: `12345.$HOSTED_ZONE_NAME` 
-pointing to `12345.execute-api.localhost.localstack.cloud`, and `67890.$HOSTED_ZONE_NAME` pointing to
-`67890.execute-api.localhost.localstack.cloud`. Set a TTL (Time to Live) of 60 seconds for these records.
+To update DNS records in the specified Route53 hosted zone (`$HOSTED_ZONE_ID`), add two CNAME records: `12345.$HOSTED_ZONE_NAME` pointing to `12345.execute-api.localhost.localstack.cloud`, and `67890.$HOSTED_ZONE_NAME` pointing to `67890.execute-api.localhost.localstack.cloud`.
+Set a TTL (Time to Live) of 60 seconds for these records.
 
 ```
 $ awslocal route53 change-resource-record-sets \
 --hosted-zone $HOSTED_ZONE_ID \
 --change-batch '{
-"Changes": [
-{
-"Action": "CREATE",
-"ResourceRecordSet": {
-"Name": "12345.'$HOSTED_ZONE_NAME'",
-"Type": "CNAME",
-"TTL": 60,
-"ResourceRecords": [
-{"Value": "12345.execute-api.localhost.localstack.cloud"}
-]
-}
-},
-{
-"Action": "CREATE",
-"ResourceRecordSet": {
-"Name": "67890.'$HOSTED_ZONE_NAME'",
-"Type": "CNAME",
-"TTL": 60,
-"ResourceRecords": [
-{"Value": "67890.execute-api.localhost.localstack.cloud"}
-]
-}
-}
-]
+    "Changes": [
+    {
+        "Action": "CREATE",
+        "ResourceRecordSet": {
+            "Name": "12345.'$HOSTED_ZONE_NAME'",
+            "Type": "CNAME",
+            "TTL": 60,
+            "ResourceRecords": [
+                {"Value": "12345.execute-api.localhost.localstack.cloud"}
+            ]
+        }
+    },
+    {
+        "Action": "CREATE",
+        "ResourceRecordSet": {
+            "Name": "67890.'$HOSTED_ZONE_NAME'",
+            "Type": "CNAME",
+            "TTL": 60,
+            "ResourceRecords": [
+                {"Value": "67890.execute-api.localhost.localstack.cloud"}
+            ]
+        }
+    }
+    ]
 }'
 ```
 
-Finally, we'll update the DNS records in the Route53 hosted zone identified by **`$HOSTED_ZONE_ID`**. 
-We're adding two CNAME records for the subdomain `test.$HOSTED_ZONE_NAME`. The first record points 
-to `12345.$HOSTED_ZONE_NAME` and is linked with the earlier created health check, designated as the primary failover target. 
+Finally, we'll update the DNS records in the Route53 hosted zone identified by `$HOSTED_ZONE_ID`.
+We're adding two CNAME records for the subdomain `test.$HOSTED_ZONE_NAME`.
+The first record points to `12345.$HOSTED_ZONE_NAME` and is linked with the earlier created health check, designated as the primary failover target.
 The second record points to `67890.$HOSTED_ZONE_NAME` and is set as the secondary failover target.
 
 ```
 $ awslocal route53 change-resource-record-sets \
 --hosted-zone-id $HOSTED_ZONE_ID \
 --change-batch '{
-"Changes": [
-{
-"Action": "CREATE",
-"ResourceRecordSet": {
-"Name": "test.'$HOSTED_ZONE_NAME'",
-"Type": "CNAME",
-"SetIdentifier": "12345",
-"AliasTarget": {
-"HostedZoneId": "'$HOSTED_ZONE_ID'",
-"DNSName": "12345.'$HOSTED_ZONE_NAME'",
-"EvaluateTargetHealth": true
-},
-"HealthCheckId": "'$HEALTH_CHECK_ID'",
-"Failover": "PRIMARY"
-}
-},
-{
-"Action": "CREATE",
-"ResourceRecordSet": {
-"Name": "test.'$HOSTED_ZONE_NAME'",
-"Type": "CNAME",
-"SetIdentifier": "67890",
-"AliasTarget": {
-"HostedZoneId": "'$HOSTED_ZONE_ID'",
-"DNSName": "67890.'$HOSTED_ZONE_NAME'",
-"EvaluateTargetHealth": true
-},
-"Failover": "SECONDARY"
-}
-}
+    "Changes": [
+    {
+        "Action": "CREATE",
+        "ResourceRecordSet": {
+            "Name": "test.'$HOSTED_ZONE_NAME'",
+            "Type": "CNAME",
+            "SetIdentifier": "12345",
+            "AliasTarget": {
+                "HostedZoneId": "'$HOSTED_ZONE_ID'",
+                "DNSName": "12345.'$HOSTED_ZONE_NAME'",
+                "EvaluateTargetHealth": true
+            },
+            "HealthCheckId": "'$HEALTH_CHECK_ID'",
+            "Failover": "PRIMARY"
+        }
+    },
+    {
+        "Action": "CREATE",
+        "ResourceRecordSet": {
+            "Name": "test.'$HOSTED_ZONE_NAME'",
+            "Type": "CNAME",
+            "SetIdentifier": "67890",
+            "AliasTarget": {
+                "HostedZoneId": "'$HOSTED_ZONE_ID'",
+                "DNSName": "67890.'$HOSTED_ZONE_NAME'",
+                "EvaluateTargetHealth": true
+            },
+            "Failover": "SECONDARY"
+        }
+    }
 ]
 }'
 ```
 
-This setup represents the basic failover configuration where traffic is redirected to different endpoints based on their health check status. To confirm that the CNAME record for `test.hello-localstack.com` points to `12345.execute-api.localhost.localstack.cloud`, you can use the following `dig` command:
+This setup represents the basic failover configuration where traffic is redirected to different endpoints based on their health check status.
+To confirm that the CNAME record for `test.hello-localstack.com` points to `12345.execute-api.localhost.localstack.cloud`, you can use the following `dig` command:
 
 ```
 $ dig @localhost test.hello-localstack.com CNAME
-<disable-copy>                                        
+<disable-copy>
 .....
 ;; QUESTION SECTION:
 ;test.hello-localstack.com.	IN	CNAME
@@ -191,69 +188,30 @@ test.hello-localstack.com. 300	IN	CNAME	12345.execute-api.localhost.localstack.c
 
 ### Creating a controlled outage
 
-Our setup is now complete and ready for testing. To mimic a regional outage in the `us-west-1` region, we'll conduct an experiment that halts all service invocations in this region, including the health check function. Once the primary region becomes non-functional, Route 53's health checks will fail. This failure will activate the failover policy, redirecting traffic to the corresponding services in the secondary region, thus maintaining service continuity.
+Our setup is now complete and ready for testing.
+To mimic a regional outage in the `us-west-1` region, we'll configure the [Chaos Plugin](#) to halt all service invocations in this region, including the health check function.
+Once the primary region becomes non-functional, Route 53's health checks will fail.
+This failure will activate the failover policy, redirecting traffic to the corresponding services in the secondary region, thus maintaining service continuity.
 
 ```
-$ cat region-outage-experiment.json
-<disable-copy>
-{
-"description": "template for internal server error for few regions i.e. us-west-1",
-"actions": {
-"regionUnavailable-us-west-1": {
-"actionId": "localstack:generic:api-error",
-"parameters": {
-"region": "us-west-1",
-"errorCode": "503"
-}
-}
-},
-"stopConditions": [],
-"roleArn": "arn:aws:iam:000000000000:role/ExperimentRole"
-}
-</disable-copy>               
+$ curl -L -X POST 'http://localhost.localstack.cloud:4566/_localstack/chaos/faults' \
+-H 'Content-Type: application/json' \
+-d '
+[
+    {
+        "region": "us-west-1"
+    }
+]'
 ```
 
-This Fault Injection Simulator (FIS) experiment template is set up to mimic a `Service Unavailable` (503 error) in the `us-west-1` region. To create the experiment template, use the following command:
+This will cause all services to fail in the `us-west-1` region with a 503 Service Unavailable error.
+Because of this, Route 53's health checks will detect the failure and redirect traffic to the standby region as per the failover setup.
 
-```
-$ awslocal fis create-experiment-template --cli-input-json file://region-outage-experiment.json
-```
-
-Once the template is created, start the experiment using its ID:
-
-```
-$ awslocal fis start-experiment --experiment-template-id <EXPERIMENT_TEMPLATE_ID>
-<disable-copy>
-{
-"experiment": {
-"id": "651b5196-b244-4a8b-8ab6-d7b9e13998a0",
-"experimentTemplateId": "d3a1a31b-c52e-49ec-8387-8f5eb75a11df",
-"roleArn": "arn:aws:iam:000000000000:role/ExperimentRole",
-"state": {
-"status": "running"
-},
-"actions": {
-"regionUnavailable-us-east-1": {
-"actionId": "localstack:generic:api-error",
-"parameters": {
-"region": "us-west-1",
-"errorCode": "503"
-}
-}
-},
-"stopConditions": [],
-"creationTime": 1699902569.439826,
-"startTime": 1699902569.439826
-}
-}
-</disable-copy>
-```
-
-Replace `<EXPERIMENT_TEMPLATE_ID>` with the ID of the experiment template created in the previous step. When the experiment is active, Route 53's health checks will detect the failure and redirect traffic to the standby region as per the failover setup. Confirm this redirection with:
+Confirm this redirection with:
 
 ```
 $ dig @localhost test.hello-localstack.com CNAME
-<disable-copy>                                        
+<disable-copy>
 .....
 ;; QUESTION SECTION:
 ;test.hello-localstack.com.	IN	CNAME
@@ -316,5 +274,5 @@ The LocalStack logs will confirm which API Gateway was called based on the resol
 
 ```bash
 2023-11-07T11:59:28.292 DEBUG --- [   asgi_gw_9] l.s.l.i.version_manager    : > {resource: /productApi,path: /productApi,httpMethod: GET,headers: {Host=67890.execute-api.localhost.localstack.cloud:4566,
-User-Agent=python-requests/2.31.0, accept-encoding=gzip, deflate, accept=*/*, Connection=keep-alive, x-localstack-tgt-api=apigateway .... 
+User-Agent=python-requests/2.31.0, accept-encoding=gzip, deflate, accept=*/*, Connection=keep-alive, x-localstack-tgt-api=apigateway ....
 ```

@@ -15,6 +15,10 @@ demonstrate testing software behavior and error handling. This kind of test help
 database downtime gracefully by implementing strategies such as queuing requests to prevent data loss. This proactive error
 handling ensures that the system can maintain its operations despite partial failures.
 
+> [!WARNING]
+> This sample uses the FIS action `localstack:generic:api-error` which is deprecated and marked for removal.
+> Please migrate to the Chaos API which supports this capability and more.
+
 ![fis-experiment-1](images/fis-experiment-1.png)
 
 ## Prerequisites
