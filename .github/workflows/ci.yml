@@ -41,7 +41,7 @@ jobs:
 
       - name: Run Integration Tests
         run: |
-          pip3 install boto3 pytest requests
+          pip3 install boto3 pytest requests dnspython
           pytest
         env:
           AWS_DEFAULT_REGION: us-east-1
