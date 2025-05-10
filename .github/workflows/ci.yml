@@ -39,6 +39,24 @@ jobs:
           bash solutions/dynamodb-outage.sh
           bash solutions/route53-failover.sh
 
+      - name: Debug steps
+        run: |
+          dig @127.0.0.1 test.hello-localstack.com CNAME +short
+          export PRIMARY_API_REGION=us-east-1
+          curl -L --request POST 'http://localhost:4566/_localstack/chaos/faults' \
+            --header 'Content-Type: application/json' \
+            --data "[
+                {\"service\": \"apigateway\", \"region\": \"${PRIMARY_API_REGION}\"},
+                {\"service\": \"lambda\", \"region\": \"${PRIMARY_API_REGION}\"}
+          ]"
+          sleep 40
+          dig @127.0.0.1 test.hello-localstack.com CNAME +short
+          curl --location --request POST 'http://localhost.localstack.cloud:4566/_localstack/chaos/faults' \
+            --header 'Content-Type: application/json' \
+            --data '[]'
+          sleep 30
+          dig @127.0.0.1 test.hello-localstack.com CNAME +short
+
       - name: Run Integration Tests
         run: |
           pip3 install boto3 pytest requests dnspython
