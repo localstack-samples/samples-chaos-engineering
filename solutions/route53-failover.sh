@@ -1,107 +1,165 @@
-echo "--- Step 1: Define Hosted Zone ---"
+#!/bin/bash
+
+set -e
+set -o pipefail
+
+# Colors for logging
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+# Logging functions
+log() {
+    echo -e "${GREEN}[$(date +'%Y-%m-%d %H:%M:%S')]${NC} $1" >&2
+}
+
+error_log() {
+    echo -e "${RED}[$(date +'%Y-%m-%d %H:%M:%S')] ERROR:${NC} $1" >&2
+}
+
+trap 'error_log "An error occurred. Exiting..."; exit 1' ERR
+
+# Step 1: Define Hosted Zone
+log "Defining hosted zone..."
 HOSTED_ZONE_NAME="hello-localstack.com"
 RAW_HOSTED_ZONE_ID=$(awslocal route53 create-hosted-zone \
     --name "$HOSTED_ZONE_NAME" \
     --caller-reference "zone-$(date +%s)" | jq -r .HostedZone.Id)
 CLEANED_HOSTED_ZONE_ID="${RAW_HOSTED_ZONE_ID#/hostedzone/}"
-echo "Hosted Zone Name: $HOSTED_ZONE_NAME"
-echo "Raw Hosted Zone ID: $RAW_HOSTED_ZONE_ID"
-echo
 
-export HOSTED_ZONE_NAME
-export RAW_HOSTED_ZONE_ID
+log "Hosted Zone Name: $HOSTED_ZONE_NAME"
+log "Raw Hosted Zone ID: $RAW_HOSTED_ZONE_ID"
+export HOSTED_ZONE_NAME RAW_HOSTED_ZONE_ID
 
-echo "--- Step 2: Define API Gateway and Health Check Parameters ---"
+# Step 2: Define API Gateway and Health Check Parameters
+log "Defining API Gateway and health check parameters..."
 PRIMARY_API_ID="12345"
 SECONDARY_API_ID="67890"
-PRIMARY_API_REGION="us-east-1" # Define the region of your primary API Gateway
-
+PRIMARY_API_REGION="us-east-1"
 HEALTH_CHECK_RESOURCE_PATH="/dev/healthcheck"
 PRIMARY_API_GATEWAY_FQDN="${PRIMARY_API_ID}.execute-api.localhost.localstack.cloud"
 HEALTH_CHECK_PORT=4566
 
-echo "Primary API ID: $PRIMARY_API_ID in region $PRIMARY_API_REGION"
-echo "Primary API FQDN for Health Check: $PRIMARY_API_GATEWAY_FQDN"
-echo "Health Check Port: $HEALTH_CHECK_PORT"
-echo "Health Check Path: $HEALTH_CHECK_RESOURCE_PATH"
-echo
+log "Primary API ID: $PRIMARY_API_ID"
+log "Primary API FQDN: $PRIMARY_API_GATEWAY_FQDN"
+log "Health Check Port: $HEALTH_CHECK_PORT"
+log "Health Check Path: $HEALTH_CHECK_RESOURCE_PATH"
 
-echo "--- Step 3: Create Health Check for the Primary API Gateway ---"
-# Health check can be created in any region, let's use us-west-1 as an example for the HC resource
+# Step 3: Create Health Check for the Primary API Gateway
+log "Creating Route 53 health check..."
 HEALTH_CHECK_RESOURCE_REGION="us-west-1"
 HEALTH_CHECK_ID=$(awslocal route53 create-health-check \
     --caller-reference "hc-app-${PRIMARY_API_ID}-$(date +%s)" \
     --region "$HEALTH_CHECK_RESOURCE_REGION" \
-    --health-check-config "{
-        \"FullyQualifiedDomainName\": \"${PRIMARY_API_GATEWAY_FQDN}\",
-        \"Port\": ${HEALTH_CHECK_PORT},
-        \"ResourcePath\": \"${HEALTH_CHECK_RESOURCE_PATH}\",
-        \"Type\": \"HTTP\",
-        \"RequestInterval\": 10,
-        \"FailureThreshold\": 2
-    }" | jq -r .HealthCheck.Id)
-echo "Health Check ID created ($HEALTH_CHECK_ID) in region $HEALTH_CHECK_RESOURCE_REGION"
+    --health-check-config "{\"FullyQualifiedDomainName\": \"${PRIMARY_API_GATEWAY_FQDN}\", \"Port\": ${HEALTH_CHECK_PORT}, \"ResourcePath\": \"${HEALTH_CHECK_RESOURCE_PATH}\", \"Type\": \"HTTP\", \"RequestInterval\": 10, \"FailureThreshold\": 2}" | jq -r .HealthCheck.Id)
+
+log "Health check created with ID: $HEALTH_CHECK_ID in region $HEALTH_CHECK_RESOURCE_REGION"
 export HEALTH_CHECK_ID
-echo
 sleep 5
 
-echo "--- Step 4: Verify Initial Health of Primary API Gateway (No Chaos) ---"
-echo "Attempting to curl the primary health check endpoint directly (should be 200 OK):"
-curl --connect-timeout 5 -v "http://${PRIMARY_API_GATEWAY_FQDN}:${HEALTH_CHECK_PORT}${HEALTH_CHECK_RESOURCE_PATH}"
-echo
-echo
-echo "Fetching initial health check status from Route 53 (may take a few checks to show Success):"
-sleep 25 # (RequestInterval * FailureThreshold + buffer)
-# Query the health check status from the region it was created in
-awslocal route53 get-health-check-status --health-check-id "$HEALTH_CHECK_ID" --region "$HEALTH_CHECK_RESOURCE_REGION"
-echo
-echo
+# Step 4: Verify Initial Health
+log "Verifying primary health check endpoint (expect HTTP 200)..."
+curl --connect-timeout 5 -v "http://${PRIMARY_API_GATEWAY_FQDN}:${HEALTH_CHECK_PORT}${HEALTH_CHECK_RESOURCE_PATH}" || true
 
-echo "--- Step 5: Create CNAME Records for Regional API Endpoints ---"
+log "Fetching health check status from Route 53 (may take a few seconds)..."
+sleep 25
+awslocal route53 get-health-check-status \
+    --health-check-id "$HEALTH_CHECK_ID" \
+    --region "$HEALTH_CHECK_RESOURCE_REGION" >/dev/null
+
+# Step 5: Create CNAME Records
+log "Creating CNAME records for regional endpoints..."
 PRIMARY_REGIONAL_DNS_NAME="${PRIMARY_API_ID}.${HOSTED_ZONE_NAME}"
 SECONDARY_REGIONAL_DNS_NAME="${SECONDARY_API_ID}.${HOSTED_ZONE_NAME}"
 PRIMARY_API_TARGET_FQDN="${PRIMARY_API_ID}.execute-api.localhost.localstack.cloud"
 SECONDARY_API_TARGET_FQDN="${SECONDARY_API_ID}.execute-api.localhost.localstack.cloud"
 
-CHANGE_BATCH_REGIONAL_CNAMES_JSON=$(printf '{
-    "Comment": "Creating CNAMEs for regional API endpoints",
-    "Changes": [
-        {"Action": "UPSERT", "ResourceRecordSet": {"Name": "%s", "Type": "CNAME", "TTL": 60, "ResourceRecords": [{"Value": "%s"}]}},
-        {"Action": "UPSERT", "ResourceRecordSet": {"Name": "%s", "Type": "CNAME", "TTL": 60, "ResourceRecords": [{"Value": "%s"}]}}
-    ]
-}' "$PRIMARY_REGIONAL_DNS_NAME" "$PRIMARY_API_TARGET_FQDN" "$SECONDARY_REGIONAL_DNS_NAME" "$SECONDARY_API_TARGET_FQDN")
+CHANGE_BATCH_REGIONAL_CNAMES_JSON=$(cat <<EOF
+{
+  "Comment": "Creating CNAMEs for regional API endpoints",
+  "Changes": [
+    {
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "$PRIMARY_REGIONAL_DNS_NAME",
+        "Type": "CNAME",
+        "TTL": 60,
+        "ResourceRecords": [{ "Value": "$PRIMARY_API_TARGET_FQDN" }]
+      }
+    },
+    {
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "$SECONDARY_REGIONAL_DNS_NAME",
+        "Type": "CNAME",
+        "TTL": 60,
+        "ResourceRecords": [{ "Value": "$SECONDARY_API_TARGET_FQDN" }]
+      }
+    }
+  ]
+}
+EOF
+)
 
-echo "Creating/Updating CNAMEs for regional API Gateways..."
-awslocal route53 change-resource-record-sets --hosted-zone-id "$RAW_HOSTED_ZONE_ID" --change-batch "$CHANGE_BATCH_REGIONAL_CNAMES_JSON"
-echo
+awslocal route53 change-resource-record-sets \
+    --hosted-zone-id "$RAW_HOSTED_ZONE_ID" \
+    --change-batch "$CHANGE_BATCH_REGIONAL_CNAMES_JSON" >/dev/null
+log "CNAME records created."
 
-echo "--- Step 6: Create Failover Alias Records ---"
+# Step 6: Create Failover Alias Records
+log "Creating failover alias records..."
 FAILOVER_RECORD_NAME="test.${HOSTED_ZONE_NAME}"
 PRIMARY_FAILOVER_SET_ID="primary-app-${PRIMARY_API_ID}"
 SECONDARY_FAILOVER_SET_ID="secondary-app-${SECONDARY_API_ID}"
 
-CHANGE_BATCH_FAILOVER_ALIASES_JSON=$(printf '{
-    "Comment": "Creating failover alias records for %s",
-    "Changes": [
-        {
-            "Action": "UPSERT",
-            "ResourceRecordSet": {
-                "Name": "%s", "Type": "CNAME", "SetIdentifier": "%s", "Failover": "PRIMARY", "HealthCheckId": "%s",
-                "AliasTarget": {"HostedZoneId": "%s", "DNSName": "%s", "EvaluateTargetHealth": true}
-            }
-        },
-        {
-            "Action": "UPSERT",
-            "ResourceRecordSet": {
-                "Name": "%s", "Type": "CNAME", "SetIdentifier": "%s", "Failover": "SECONDARY",
-                "AliasTarget": {"HostedZoneId": "%s", "DNSName": "%s", "EvaluateTargetHealth": false}
-            }
+CHANGE_BATCH_FAILOVER_ALIASES_JSON=$(cat <<EOF
+{
+  "Comment": "Creating failover alias records for $FAILOVER_RECORD_NAME",
+  "Changes": [
+    {
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "$FAILOVER_RECORD_NAME",
+        "Type": "CNAME",
+        "SetIdentifier": "$PRIMARY_FAILOVER_SET_ID",
+        "Failover": "PRIMARY",
+        "HealthCheckId": "$HEALTH_CHECK_ID",
+        "AliasTarget": {
+          "HostedZoneId": "$RAW_HOSTED_ZONE_ID",
+          "DNSName": "$PRIMARY_REGIONAL_DNS_NAME",
+          "EvaluateTargetHealth": true
         }
-    ]
-}' "$FAILOVER_RECORD_NAME" \
-   "$FAILOVER_RECORD_NAME" "$PRIMARY_FAILOVER_SET_ID" "$HEALTH_CHECK_ID" "$RAW_HOSTED_ZONE_ID" "$PRIMARY_REGIONAL_DNS_NAME" \
-   "$FAILOVER_RECORD_NAME" "$SECONDARY_FAILOVER_SET_ID" "$RAW_HOSTED_ZONE_ID" "$SECONDARY_REGIONAL_DNS_NAME")
+      }
+    },
+    {
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "$FAILOVER_RECORD_NAME",
+        "Type": "CNAME",
+        "SetIdentifier": "$SECONDARY_FAILOVER_SET_ID",
+        "Failover": "SECONDARY",
+        "AliasTarget": {
+          "HostedZoneId": "$RAW_HOSTED_ZONE_ID",
+          "DNSName": "$SECONDARY_REGIONAL_DNS_NAME",
+          "EvaluateTargetHealth": false
+        }
+      }
+    }
+  ]
+}
+EOF
+)
 
-echo "Creating/Updating failover alias records for $FAILOVER_RECORD_NAME..."
-awslocal route53 change-resource-record-sets --hosted-zone-id "$RAW_HOSTED_ZONE_ID" --change-batch "$CHANGE_BATCH_FAILOVER_ALIASES_JSON"
+awslocal route53 change-resource-record-sets \
+    --hosted-zone-id "$RAW_HOSTED_ZONE_ID" \
+    --change-batch "$CHANGE_BATCH_FAILOVER_ALIASES_JSON" >/dev/null
+log "Failover alias records created."
+
+# Final Output
 echo
+echo -e "${BLUE}Route 53 and failover setup completed successfully.${NC}"
+echo -e "${BLUE}Hosted Zone:${NC} $HOSTED_ZONE_NAME"
+echo -e "${BLUE}Primary API FQDN:${NC} $PRIMARY_API_GATEWAY_FQDN"
+echo -e "${BLUE}Health Check ID:${NC} $HEALTH_CHECK_ID"
+echo -e "${BLUE}Failover Domain:${NC} $FAILOVER_RECORD_NAME"
