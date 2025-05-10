@@ -1,0 +1,50 @@
+name: Deploy using AWS CLI
+
+on:
+  push:
+    paths-ignore:
+      - 'README.md'
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  integration-tests:
+    name: Run Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Build Lambdas
+        run: cd lambda-functions && mvn clean package shade:shade
+
+      - name: Spin up LocalStack
+        run: |
+          docker compose up -d
+          sleep 60
+        env: 
+          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
+
+      - name: Setup the solutions
+        run: |
+          pip install awscli-local
+          bash solutions/dynamodb-outage.sh
+          bash solutions/route53-failover.sh
+
+      - name: Run Integration Tests
+        run: |
+          pip3 install boto3 pytest requests
+          pytest
+        env:
+          AWS_DEFAULT_REGION: us-east-1
+          AWS_REGION: us-east-1
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
