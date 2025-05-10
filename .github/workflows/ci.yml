@@ -29,7 +29,7 @@ jobs:
       - name: Spin up LocalStack
         run: |
           docker compose up -d
-          sleep 60
+          sleep 120
         env: 
           LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
 
