@@ -44,7 +44,7 @@ stop:			## Stop localstack
 	docker compose down
 
 logs:			## Show logs from LocalStack
-	docker logs localstack-main > logs.txt
+	docker compose logs > logs.txt
 
 ready:			## Wait until LocalStack is ready
 	@echo "Waiting for LocalStack to be ready..."
