@@ -2,38 +2,43 @@
 
 apt-get -y install jq
 
-# Create resources in the 1st region
+# ---------------------------------------------------
+# Region: us-east-1
+# ---------------------------------------------------
 
+# Create DynamoDB table
 echo "Create DynamoDB table..."
 awslocal dynamodb create-table \
-        --table-name Products \
-        --attribute-definitions AttributeName=id,AttributeType=S \
-        --key-schema AttributeName=id,KeyType=HASH \
-         --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 \
-        --region us-east-1
+  --table-name Products \
+  --attribute-definitions AttributeName=id,AttributeType=S \
+  --key-schema AttributeName=id,KeyType=HASH \
+  --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 \
+  --region us-east-1
 
+# Enable DynamoDB Streams
 awslocal dynamodb update-table \
-    --table-name Products \
-    --stream-specification StreamEnabled=true,StreamViewType=NEW_AND_OLD_IMAGES \
-    --region us-east-1
+  --table-name Products \
+  --stream-specification StreamEnabled=true,StreamViewType=NEW_AND_OLD_IMAGES \
+  --region us-east-1
 
+# Create Lambda for DynamoDB Stream
 awslocal lambda create-function \
-    --function-name dynamodb-streams-to-lambda \
-    --runtime java17 \
-    --handler dynamodb_streams.DynamoDBStreamHandler::handleRequest \
-    --memory-size 256 \
-    --zip-file fileb:///etc/localstack/init/ready.d/target/product-lambda.jar \
-    --role arn:aws:iam::000000000000:role/productRole \
-    --region us-east-1
+  --function-name dynamodb-streams-to-lambda \
+  --runtime java17 \
+  --handler dynamodb_streams.DynamoDBStreamHandler::handleRequest \
+  --memory-size 256 \
+  --zip-file fileb:///etc/localstack/init/ready.d/target/product-lambda.jar \
+  --role arn:aws:iam::000000000000:role/productRole \
+  --region us-east-1
 
+# Get stream ARN and create mapping
 export STREAM_ARN=$(awslocal dynamodb describe-table --table-name Products --region us-east-1 | jq -r '.Table.LatestStreamArn')
-
 awslocal lambda create-event-source-mapping \
-    --function-name dynamodb-streams-to-lambda \
-    --event-source-arn $STREAM_ARN \
-    --starting-position LATEST
+  --function-name dynamodb-streams-to-lambda \
+  --event-source-arn $STREAM_ARN \
+  --starting-position LATEST
 
-
+# Create Lambdas
 echo "Add Product Lambda..."
 awslocal lambda create-function \
   --function-name add-product \
@@ -44,7 +49,6 @@ awslocal lambda create-function \
   --region us-east-1 \
   --role arn:aws:iam::000000000000:role/productRole \
   --environment Variables={AWS_REGION=us-east-1}
-
 
 echo "Get Product Lambda..."
 awslocal lambda create-function \
@@ -65,11 +69,11 @@ awslocal lambda create-function \
   --memory-size 512 \
   --zip-file fileb:///etc/localstack/init/ready.d/healthcheck.zip \
   --region us-east-1 \
-  --role arn:aws:iam::000000000000:role/productRole \
+  --role arn:aws:iam::000000000000:role/productRole
 
+# Create API Gateway
 export REST_API_ID=12345
 
-# create rest api gateway
 echo "Create Rest API..."
 awslocal apigateway create-rest-api --name quote-api-gateway --tags '{"_custom_id_":"12345"}' --region us-east-1
 
@@ -84,28 +88,27 @@ export HEALTHCHECK_RESOURCE_ID=$(awslocal apigateway create-resource --rest-api-
 
 echo "HEALTH CHECK ID 1:"
 echo $HEALTHCHECK_RESOURCE
-
 echo "RESOURCE ID:"
 echo $RESOURCE
 
+# Setup API Methods
 echo "Put GET Method..."
 awslocal apigateway put-method \
---rest-api-id $REST_API_ID \
---resource-id $RESOURCE_ID \
---http-method GET \
---request-parameters "method.request.path.productApi=true" \
---authorization-type "NONE" \
---region=us-east-1
+  --rest-api-id $REST_API_ID \
+  --resource-id $RESOURCE_ID \
+  --http-method GET \
+  --request-parameters "method.request.path.productApi=true" \
+  --authorization-type "NONE" \
+  --region=us-east-1
 
 echo "Put POST Method..."
 awslocal apigateway put-method \
---rest-api-id $REST_API_ID \
---resource-id $RESOURCE_ID \
---http-method POST \
---request-parameters "method.request.path.productApi=true" \
---authorization-type "NONE" \
---region=us-east-1
-
+  --rest-api-id $REST_API_ID \
+  --resource-id $RESOURCE_ID \
+  --http-method POST \
+  --request-parameters "method.request.path.productApi=true" \
+  --authorization-type "NONE" \
+  --region=us-east-1
 
 echo "Update GET Method..."
 awslocal apigateway update-method \
@@ -115,7 +118,7 @@ awslocal apigateway update-method \
   --patch-operations "op=replace,path=/requestParameters/method.request.querystring.param,value=true" \
   --region=us-east-1
 
-
+# Integrations
 echo "Put POST Method Integration..."
 awslocal apigateway put-integration \
   --rest-api-id $REST_API_ID \
@@ -138,23 +141,22 @@ awslocal apigateway put-integration \
   --passthrough-behavior WHEN_NO_MATCH \
   --region=us-east-1
 
-echo "Put GET Method that returns 200 for HealthCheck..."
+echo "Put GET Method for HealthCheck..."
 awslocal apigateway put-method \
---rest-api-id $REST_API_ID \
---resource-id $HEALTHCHECK_RESOURCE_ID \
---http-method GET \
---request-parameters "method.request.path.healthcheck=true" \
---authorization-type "NONE" \
---region=us-east-1
+  --rest-api-id $REST_API_ID \
+  --resource-id $HEALTHCHECK_RESOURCE_ID \
+  --http-method GET \
+  --request-parameters "method.request.path.healthcheck=true" \
+  --authorization-type "NONE" \
+  --region=us-east-1
 
 echo "Put GET Method Integration for HealthCheck..."
 awslocal apigateway put-integration \
   --rest-api-id $REST_API_ID \
   --resource-id $HEALTHCHECK_RESOURCE_ID \
   --http-method GET \
-  --type HTTP \
-  --integration-http-method POST \
   --type AWS_PROXY \
+  --integration-http-method POST \
   --uri arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:000000000000:function:healthcheck/invocations \
   --passthrough-behavior WHEN_NO_MATCH \
   --region=us-east-1
@@ -165,18 +167,20 @@ awslocal apigateway create-deployment \
   --stage-name dev \
   --region=us-east-1
 
-# --------------------------------------------------------------------------------------------------------------------
+# ---------------------------------------------------
+# Region: us-west-1
+# ---------------------------------------------------
 
-# Create resources for 2nd region
-
+# Create DynamoDB table
 echo "Create DynamoDB table..."
 awslocal dynamodb create-table \
-        --table-name Products \
-        --attribute-definitions AttributeName=id,AttributeType=S \
-        --key-schema AttributeName=id,KeyType=HASH \
-         --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 \
-        --region us-west-1
+  --table-name Products \
+  --attribute-definitions AttributeName=id,AttributeType=S \
+  --key-schema AttributeName=id,KeyType=HASH \
+  --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 \
+  --region us-west-1
 
+# Create Lambdas
 echo "Add Product Lambda..."
 awslocal lambda create-function \
   --function-name add-product \
@@ -187,7 +191,6 @@ awslocal lambda create-function \
   --region us-west-1 \
   --role arn:aws:iam::000000000000:role/productRole \
   --environment Variables={AWS_REGION=us-west-1}
-
 
 echo "Get Product Lambda..."
 awslocal lambda create-function \
@@ -208,11 +211,11 @@ awslocal lambda create-function \
   --memory-size 512 \
   --zip-file fileb:///etc/localstack/init/ready.d/healthcheck.zip \
   --region us-west-1 \
-  --role arn:aws:iam::000000000000:role/productRole \
+  --role arn:aws:iam::000000000000:role/productRole
 
+# Create API Gateway
 export REST_API_ID=67890
 
-# create rest api gateway
 echo "Create Rest API..."
 awslocal apigateway create-rest-api --name quote-api-gateway --tags '{"_custom_id_":"67890"}' --region us-west-1
 
@@ -227,28 +230,27 @@ export HEALTHCHECK_RESOURCE_ID=$(awslocal apigateway create-resource --rest-api-
 
 echo "HEALTH CHECK ID 1:"
 echo $HEALTHCHECK_RESOURCE
-
 echo "RESOURCE ID:"
 echo $RESOURCE
 
+# Setup API Methods
 echo "Put GET Method..."
 awslocal apigateway put-method \
---rest-api-id $REST_API_ID \
---resource-id $RESOURCE_ID \
---http-method GET \
---request-parameters "method.request.path.productApi=true" \
---authorization-type "NONE" \
---region=us-west-1
+  --rest-api-id $REST_API_ID \
+  --resource-id $RESOURCE_ID \
+  --http-method GET \
+  --request-parameters "method.request.path.productApi=true" \
+  --authorization-type "NONE" \
+  --region=us-west-1
 
 echo "Put POST Method..."
 awslocal apigateway put-method \
---rest-api-id $REST_API_ID \
---resource-id $RESOURCE_ID \
---http-method POST \
---request-parameters "method.request.path.productApi=true" \
---authorization-type "NONE" \
---region=us-west-1
-
+  --rest-api-id $REST_API_ID \
+  --resource-id $RESOURCE_ID \
+  --http-method POST \
+  --request-parameters "method.request.path.productApi=true" \
+  --authorization-type "NONE" \
+  --region=us-west-1
 
 echo "Update GET Method..."
 awslocal apigateway update-method \
@@ -258,7 +260,7 @@ awslocal apigateway update-method \
   --patch-operations "op=replace,path=/requestParameters/method.request.querystring.param,value=true" \
   --region=us-west-1
 
-
+# Integrations
 echo "Put POST Method Integration..."
 awslocal apigateway put-integration \
   --rest-api-id $REST_API_ID \
@@ -281,24 +283,22 @@ awslocal apigateway put-integration \
   --passthrough-behavior WHEN_NO_MATCH \
   --region=us-west-1
 
-echo "Put GET Method that returns 200 for HealthCheck..."
+echo "Put GET Method for HealthCheck..."
 awslocal apigateway put-method \
---rest-api-id $REST_API_ID \
---resource-id $HEALTHCHECK_RESOURCE_ID \
---http-method GET \
---request-parameters "method.request.path.healthcheck=true" \
---authorization-type "NONE" \
---region=us-west-1
-
+  --rest-api-id $REST_API_ID \
+  --resource-id $HEALTHCHECK_RESOURCE_ID \
+  --http-method GET \
+  --request-parameters "method.request.path.healthcheck=true" \
+  --authorization-type "NONE" \
+  --region=us-west-1
 
 echo "Put GET Method Integration for HealthCheck..."
 awslocal apigateway put-integration \
   --rest-api-id $REST_API_ID \
   --resource-id $HEALTHCHECK_RESOURCE_ID \
   --http-method GET \
-  --type HTTP \
-  --integration-http-method POST \
   --type AWS_PROXY \
+  --integration-http-method POST \
   --uri arn:aws:apigateway:us-west-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-west-1:000000000000:function:healthcheck/invocations \
   --passthrough-behavior WHEN_NO_MATCH \
   --region=us-west-1
