@@ -36,8 +36,8 @@ jobs:
       - name: Setup the solutions
         run: |
           pip install awscli-local
-          bash solutions/dynamodb-outage.sh
-          bash solutions/route53-failover.sh
+          ./solutions/dynamodb-outage.sh
+          ./solutions/route53-failover.sh
 
       - name: Debug steps
         run: |
