@@ -23,44 +23,24 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Build Lambdas
-        run: cd lambda-functions && mvn clean package shade:shade
+      - name: Install dependencies
+        run: make install
 
       - name: Spin up LocalStack
         run: |
-          docker compose up -d
-          sleep 120
+          make start
+          make ready
         env: 
           LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
 
       - name: Setup the solutions
         run: |
           pip install awscli-local
-          ./solutions/dynamodb-outage.sh
-          ./solutions/route53-failover.sh
-
-      - name: Debug steps
-        run: |
-          dig @127.0.0.1 test.hello-localstack.com CNAME +short
-          export PRIMARY_API_REGION=us-east-1
-          curl -L --request POST 'http://localhost:4566/_localstack/chaos/faults' \
-            --header 'Content-Type: application/json' \
-            --data "[
-                {\"service\": \"apigateway\", \"region\": \"${PRIMARY_API_REGION}\"},
-                {\"service\": \"lambda\", \"region\": \"${PRIMARY_API_REGION}\"}
-          ]"
-          sleep 40
-          dig @127.0.0.1 test.hello-localstack.com CNAME +short
-          curl --location --request POST 'http://localhost.localstack.cloud:4566/_localstack/chaos/faults' \
-            --header 'Content-Type: application/json' \
-            --data '[]'
-          sleep 30
-          dig @127.0.0.1 test.hello-localstack.com CNAME +short
+          make deploy
 
       - name: Run Integration Tests
         run: |
-          pip3 install boto3 pytest requests dnspython
-          pytest
+          make test
         env:
           AWS_DEFAULT_REGION: us-east-1
           AWS_REGION: us-east-1
@@ -70,4 +50,5 @@ jobs:
       - name: Logs out of LocalStack 
         if: always()
         run: |
-          docker compose logs
+          make logs
+          cat logs.txt
