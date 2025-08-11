@@ -21,7 +21,10 @@ This sample demonstrates how to test resiliency in serverless applications using
 
 The following diagram shows the architecture that this sample application builds and deploys:
 
-![Architecture Diagram](images/architecture-diagram.png)
+![Architecture Diagram](images/architecture.png)
+
+> [!NOTE]
+> The above architecture diagram is a simplified view of the application. The actual architecture is more complex and includes additional services and components, distributed across multiple regions.
 
 **Primary Region (us-east-1):**
 
